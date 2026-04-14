@@ -4,10 +4,16 @@ import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, KanbanSquare, LogOut, Hexagon } from 'lucide-react';
 
 export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
-  const { logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const location = useLocation();
 
-  // TEMPORARY DEVELOPMENT BYPASS: Return layout wrapper enclosing Outlet
+  if (loading) return <div className="h-screen w-full bg-slate-50 flex items-center justify-center">Loading...</div>;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Restore Layout structure logic below for logged-in users...
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans selection:bg-indigo-100">
       {/* Modern Sidebar */}

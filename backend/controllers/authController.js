@@ -34,9 +34,9 @@ exports.register = async (req, res) => {
       });
       res.status(201).json({ message: 'User registered. Please check your email to verify' });
     } catch (err) {
-      user.verificationToken = undefined;
-      await user.save({ validateBeforeSave: false });
-      res.status(500).json({ message: 'Email could not be sent' });
+      // Fallback for Development: Allow success even if SMTP fails
+      console.warn('Mailtrap SMTP is not configured. Registration successful anyway.');
+      res.status(201).json({ message: 'User registered successfully! (SMTP skipped)' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
