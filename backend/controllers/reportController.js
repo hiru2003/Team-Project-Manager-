@@ -26,7 +26,7 @@ exports.generateReport = async (req, res) => {
     // Filter criteria based on role
     const taskQuery = { workspaceId };
     if (req.user.role === 'Member') {
-      taskQuery.assignedTo = req.user._id;
+      taskQuery.assignedTo = { $in: [req.user._id] };
     }
 
     const [tasks, projects] = await Promise.all([
@@ -51,7 +51,9 @@ exports.generateReport = async (req, res) => {
       tasks: tasks.map(t => ({
         title: t.title,
         status: t.status,
-        assignee: t.assignedTo?.name || 'Unassigned',
+        assignees: t.assignedTo && t.assignedTo.length > 0 
+          ? t.assignedTo.map(a => a.name).join(', ') 
+          : 'Unassigned',
         priority: t.priority,
         dueDate: t.dueDate
       }))

@@ -31,18 +31,18 @@ exports.createTask = async (req, res) => {
       }
     }
 
-    if (assignedTo) {
-      const assigneeInWorkspace = workspace.members.some(
-        (member) => member.user.toString() === assignedTo.toString()
+    if (assignedTo && Array.isArray(assignedTo)) {
+      const allMembersExist = assignedTo.every((id) =>
+        workspace.members.some((m) => m.user.toString() === id.toString())
       );
-      if (!assigneeInWorkspace) {
-        return res.status(400).json({ message: 'Assignee must be a workspace member' });
+      if (!allMembersExist) {
+        return res.status(400).json({ message: 'All assignees must be workspace members' });
       }
     }
 
     const task = await Task.create({
       ...req.body,
-      assignedTo: assignedTo || req.user._id
+      assignedTo: assignedTo && assignedTo.length > 0 ? assignedTo : [req.user._id]
     });
     res.status(201).json(task);
   } catch (error) {
@@ -73,10 +73,10 @@ exports.getTasks = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized for this workspace' });
     }
 
-    // Visibility Logic: Members only see their own assigned tasks
+    // Visibility Logic: Members only see tasks where they are an assignee
     // Admin continues to see everything in the project
     if (req.user.role === 'Member') {
-      query.assignedTo = req.user._id;
+      query.assignedTo = { $in: [req.user._id] };
     }
 
     const tasks = await Task.find(query).populate('assignedTo', 'name email');
@@ -98,16 +98,16 @@ exports.updateTask = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized for this workspace' });
     }
 
-    if (req.user.role === 'Member' && existingTask.assignedTo?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Members can only update their assigned tasks' });
+    if (req.user.role === 'Member' && !existingTask.assignedTo.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'Members can only update tasks they are assigned to' });
     }
 
-    if (req.body.assignedTo) {
-      const assigneeInWorkspace = workspace.members.some(
-        (member) => member.user.toString() === req.body.assignedTo.toString()
+    if (req.body.assignedTo && Array.isArray(req.body.assignedTo)) {
+      const allMembersExist = req.body.assignedTo.every((id) =>
+        workspace.members.some((m) => m.user.toString() === id.toString())
       );
-      if (!assigneeInWorkspace) {
-        return res.status(400).json({ message: 'Assignee must be a workspace member' });
+      if (!allMembersExist) {
+        return res.status(400).json({ message: 'All assignees must be workspace members' });
       }
     }
 

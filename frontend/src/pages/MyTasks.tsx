@@ -12,7 +12,7 @@ type Task = {
   priority?: 'Low' | 'Medium' | 'High';
   dueDate?: string;
   projectId?: { _id: string; name: string } | string;
-  assignedTo?: { _id: string; name: string; email: string } | string;
+  assignedTo?: { _id: string; name: string; email: string }[] | string[];
   workspaceId?: string;
   workspaceName?: string;
 };
@@ -60,9 +60,11 @@ export default function MyTasks() {
   const myTasks = useMemo(() => {
     if (user?.role !== 'Member') return tasks;
     return tasks.filter((task) => {
-      const assigneeId =
-        typeof task.assignedTo === 'string' ? task.assignedTo : task.assignedTo?._id;
-      return assigneeId === user?._id;
+      const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+      return assignees.some((a: any) => {
+        const id = typeof a === 'string' ? a : a?._id;
+        return id === user?._id;
+      });
     });
   }, [tasks, user]);
 

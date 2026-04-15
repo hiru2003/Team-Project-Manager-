@@ -17,7 +17,7 @@ type TaskItem = {
   status: 'To Do' | 'In Progress' | 'Done';
   priority?: 'Low' | 'Medium' | 'High';
   dueDate?: string;
-  assignedTo?: { _id: string; name: string } | string;
+  assignedTo?: { _id: string; name: string }[] | string[];
 };
 
 type TaskForm = {
@@ -26,7 +26,7 @@ type TaskForm = {
   status: 'To Do' | 'In Progress' | 'Done';
   priority: 'Low' | 'Medium' | 'High';
   dueDate: string;
-  assignedTo: string;
+  assignedTo: string[];
 };
 
 export default function ProjectView() {
@@ -43,7 +43,7 @@ export default function ProjectView() {
     status: 'To Do', 
     priority: 'Medium', 
     dueDate: '',
-    assignedTo: '' 
+    assignedTo: [] 
   });
   
   const { user } = useAuth();
@@ -51,7 +51,7 @@ export default function ProjectView() {
   const canManageTask = user?.role === 'Admin' || user?.role === 'Manager';
 
   const resetTaskForm = () => {
-    setNewTask({ title: '', description: '', status: 'To Do', priority: 'Medium', dueDate: '', assignedTo: '' });
+    setNewTask({ title: '', description: '', status: 'To Do', priority: 'Medium', dueDate: '', assignedTo: [] });
     setEditingTaskId(null);
   };
 
@@ -86,7 +86,13 @@ export default function ProjectView() {
   };
 
   const openEditTaskModal = (task: TaskItem) => {
-    const assignedTo = typeof task.assignedTo === 'string' ? task.assignedTo : task.assignedTo?._id || '';
+    let assignedTo: string[] = [];
+    if (Array.isArray(task.assignedTo)) {
+      assignedTo = task.assignedTo.map(a => typeof a === 'string' ? a : a._id);
+    } else if (task.assignedTo) {
+      assignedTo = [typeof task.assignedTo === 'string' ? task.assignedTo : task.assignedTo._id];
+    }
+
     setEditingTaskId(task._id);
     setNewTask({
       title: task.title || '',
@@ -106,22 +112,21 @@ export default function ProjectView() {
 
     setIsSubmitting(true);
     try {
-      // Ensure we don't send an empty string for assignedTo
-      const targetAssignee = newTask.assignedTo && newTask.assignedTo.trim() !== "" 
+      const targetAssignees = newTask.assignedTo.length > 0 
         ? newTask.assignedTo 
-        : user?._id;
+        : [user?._id as string];
 
       if (editingTaskId) {
         await axios.put(`/api/tasks/${editingTaskId}`, {
           ...newTask,
-          assignedTo: targetAssignee
+          assignedTo: targetAssignees
         });
       } else {
         await axios.post('/api/tasks', {
           ...newTask,
           workspaceId,
           projectId,
-          assignedTo: targetAssignee
+          assignedTo: targetAssignees
         });
       }
 
@@ -239,12 +244,30 @@ export default function ProjectView() {
                             </span>
                           )}
                         </div>
-                        {/* Fake avatar mapping or initials */}
-                        {task?.assignedTo && (
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-white shrink-0" title={typeof task.assignedTo === 'string' ? 'User' : task.assignedTo.name || 'User'}>
-                            {typeof task.assignedTo === 'string' ? 'U' : task.assignedTo.name ? task.assignedTo.name.charAt(0) : 'U'}
-                          </div>
-                        )}
+                        {/* Multiple Avatars */}
+                        <div className="flex -space-x-2 overflow-hidden">
+                          {Array.isArray(task.assignedTo) && task.assignedTo.length > 0 ? (
+                            task.assignedTo.map((assignee, idx) => {
+                              const name = typeof assignee === 'string' ? 'U' : (assignee as any).name || 'U';
+                              const id = typeof assignee === 'string' ? assignee : (assignee as any)._id;
+                              return (
+                                <div 
+                                  key={id || idx} 
+                                  className={`w-7 h-7 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
+                                    idx % 3 === 0 ? 'bg-indigo-500' : idx % 3 === 1 ? 'bg-amber-500' : 'bg-emerald-500'
+                                  }`}
+                                  title={name}
+                                >
+                                  {name.charAt(0)}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
+                              ?
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <h4 className="font-semibold text-slate-900 mb-2 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
@@ -395,24 +418,38 @@ export default function ProjectView() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Assignee</label>
-                <div className="relative group/select">
-                  <select 
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm shadow-sm cursor-pointer appearance-none"
-                    value={newTask.assignedTo}
-                    onChange={e => setNewTask({...newTask, assignedTo: e.target.value})}
-                  >
-                    <option value="">Select a member...</option>
-                    {members.map((member) => (
-                      <option key={member._id} value={member._id}>
-                        {member.name} ({member.email})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/select:text-indigo-500 transition-colors">
-                    <ArrowRight className="w-4 h-4 rotate-90" />
-                  </div>
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Team Members (Assignees)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto p-2 border border-slate-100 rounded-2xl bg-slate-50/30">
+                  {members.map((member) => (
+                    <label 
+                      key={member._id} 
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                        newTask.assignedTo.includes(member._id)
+                          ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' 
+                          : 'bg-white border-slate-200 hover:border-indigo-200'
+                      }`}
+                    >
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                        checked={newTask.assignedTo.includes(member._id)}
+                        onChange={(e) => {
+                          const id = member._id;
+                          setNewTask(prev => ({
+                            ...prev,
+                            assignedTo: e.target.checked 
+                              ? [...prev.assignedTo, id]
+                              : prev.assignedTo.filter(a => a !== id)
+                          }));
+                        }}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-slate-900">{member.name}</span>
+                        <span className="text-[10px] text-slate-500 line-clamp-1">{member.email}</span>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               </div>
 

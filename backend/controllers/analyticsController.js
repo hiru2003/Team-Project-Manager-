@@ -26,8 +26,8 @@ exports.getDashboardAnalytics = async (req, res) => {
     // Define match criteria based on role
     const taskMatch = { workspaceId };
     if (req.user.role === 'Member') {
-      // CRITICAL: Aggregation pipelines require manual ObjectId casting
-      taskMatch.assignedTo = new mongoose.Types.ObjectId(req.user._id);
+      // Aggregation requires explicit matching within arrays
+      taskMatch.assignedTo = { $in: [new mongoose.Types.ObjectId(req.user._id)] };
     }
 
     // Aggregates

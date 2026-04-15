@@ -14,11 +14,11 @@ export default function Dashboard() {
     if (user?.role !== 'Member') return recentTasks;
 
     return recentTasks.filter((task: any) => {
-      const assigneeId =
-        typeof task.assignedTo === 'string'
-          ? task.assignedTo
-          : task.assignedTo?._id;
-      return assigneeId === user?._id;
+      const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+      return assignees.some((a: any) => {
+        const id = typeof a === 'string' ? a : a?._id;
+        return id === user?._id;
+      });
     });
   }, [analytics, user]);
 
@@ -120,7 +120,7 @@ export default function Dashboard() {
         <div className="w-full px-8 h-20 flex items-center justify-between">
           <div className="flex flex-col">
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-              Operations Overview
+              Operations Overview <span className="ml-2 px-2 py-1 bg-red-500 text-white text-[10px] rounded-full animate-pulse">V2.0 LIVE</span>
             </h1>
             <p className="text-sm font-medium text-slate-500">Real-time metrics for your active workspaces</p>
           </div>
@@ -264,7 +264,11 @@ export default function Dashboard() {
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
                               <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{task.title}</span>
-                              <span className="text-xs text-slate-400 mt-0.5">Assigned to: {task.assignedTo?.name || 'Unassigned'}</span>
+                              <span className="text-xs text-slate-400 mt-0.5">
+                                Assigned to: {Array.isArray(task.assignedTo) 
+                                  ? task.assignedTo.map((a: any) => a.name || 'User').join(', ') 
+                                  : (task.assignedTo?.name || 'Unassigned')}
+                              </span>
                             </div>
                           </td>
                           <td className="px-8 py-4">
