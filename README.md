@@ -1,12 +1,30 @@
 # Team Project Manager (NexusFlow)
 
-A full-stack team collaboration app for managing workspaces, projects, and tasks with role-aware views, analytics, and report export.
+A premium, role-based project management platform designed for enterprise team collaboration. Features a unified workspace architecture, task delegation, and advanced analytics.
 
 ## Tech Stack
 
-- Frontend: React, TypeScript, Vite, Axios, React Router, Tailwind CSS, Recharts
-- Backend: Node.js, Express, Mongoose, JWT, bcrypt, Nodemailer
-- Database: MongoDB
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Recharts, Lucide Icons
+- **Backend**: Node.js, Express, Mongoose (MongoDB), JWT Authentication
+- **Database**: MongoDB Atlas
+
+## Enterprise Architecture
+
+NexusFlow has evolved from personal silos to a **Unified Team Workspace** model. All members of the organization now operate within a single shared environment, ensuring absolute transparency and seamless task delegation.
+
+### Role System
+- **Admin**: Full workspace oversight. Can create projects, assign tasks to any member, and view global analytics.
+- **Member**: Focused execution. Automatically joined to the team workspace; sees only tasks specifically assigned to them.
+
+## Key Features
+
+- **Personalized Dashboards**:
+  - **Admins** see global task distribution and workspace-wide trends.
+  - **Members** see personal progress metrics and an immediate list of "Your Assigned Tasks".
+- **Kanban-Style Task Tracking**: Manage task lifecycle through `To Do`, `In Progress`, and `Done` states.
+- **Collaborative Task Assignment**: Admins can assign tasks to any registered team member via a centralized directory.
+- **My Tasks View**: A dedicated, role-specific page for members to manage their individual workload.
+- **Enterprise Reporting**: Export detailed JSON reports for workspace auditing and progress tracking.
 
 ## Repository Structure
 
@@ -14,138 +32,58 @@ A full-stack team collaboration app for managing workspaces, projects, and tasks
 Team-Project-Manager-/
 ├── frontend/                 # React + TypeScript client
 │   ├── src/
-│   │   ├── pages/            # Login, Dashboard, Projects, ProjectView
-│   │   ├── context/          # Auth context + token management
-│   │   └── components/       # Route protection and shared UI pieces
-│   └── vite.config.ts        # /api proxy to backend
-└── backend/                  # Express API server
-    ├── controllers/          # Route handlers (auth, tasks, projects, etc.)
+│   │   ├── pages/            # Login, Dashboard, Projects, ProjectView, MyTasks
+│   │   ├── context/          # Auth context + role management
+│   │   └── components/       # Premium UI components & Protected routes
+│   └── vite.config.ts        # Proxy configuration
+└── backend/                  # Node.js + Express API
+    ├── controllers/          # Business logic handlers
+    ├── models/               # Mongoose schemas (User, Task, Project, Workspace)
     ├── routes/               # API route definitions
-    ├── models/               # Mongoose schemas
-    ├── middleware/           # Auth and authorization middleware
-    └── server.js             # Backend entry point
+    ├── scripts/              # Migration & maintenance utilities
+    └── server.js             # API entry point
 ```
-
-## Prerequisites
-
-- Node.js 18+ (recommended)
-- npm
-- MongoDB (local or Atlas)
 
 ## Quick Start
 
-### 1) Install dependencies
+### 1) Initialize Environment
 
 ```bash
 cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 2) Configure backend environment
+### 2) Database & Auth Configuration
 
 Create `backend/.env`:
-
 ```env
 PORT=4000
-MONGO_URI=mongodb://localhost:27017/team-manager
-JWT_SECRET=replace-with-a-secure-random-secret
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
 NODE_ENV=development
-
-# Optional email verification (Nodemailer)
-MAILTRAP_HOST=
-MAILTRAP_PORT=
-MAILTRAP_USER=
-MAILTRAP_PASS=
 ```
 
-### 3) Start backend
+### 3) Workspace Setup
 
-```bash
-cd backend
-npm run dev
-```
+Run the following scripts in `backend/` to initialize your environment:
 
-### 4) Start frontend
+- **Seed Admin**: Create the primary administrator account and workspace.
+  ```bash
+  node seed.js
+  ```
+- **Unify Data**: Merge any legacy project silos into the master team workspace.
+  ```bash
+  node scripts/unifyWorkspaces.js
+  ```
+- **Sync Members**: Ensure all registered users have access to the shared workspace.
+  ```bash
+  node scripts/syncUsers.js
+  ```
 
-```bash
-cd frontend
-npm run dev
-```
+### 4) Run Servers
 
-Frontend runs on Vite default (usually `http://localhost:5173`) and proxies `/api/*` to `http://localhost:4000`.
+**Backend**: `npm run dev` (Port 4000)
+**Frontend**: `npm run dev` (Port 5173)
 
-## Available Scripts
-
-### Backend (`backend/package.json`)
-
-- `npm run dev` - start API with nodemon
-- `npm run start` - start API with node
-
-### Frontend (`frontend/package.json`)
-
-- `npm run dev` - start Vite dev server
-- `npm run build` - type-check and build
-- `npm run lint` - run ESLint
-- `npm run preview` - preview production build
-
-## Key Features
-
-- Authentication (register, login, JWT sessions)
-- Shared workspace onboarding flow
-- Project creation and status management
-- Kanban-style task tracking (`To Do`, `In Progress`, `Done`)
-- Role-aware task visibility (member sees assigned tasks)
-- Dashboard analytics (task/project summaries and charts)
-- JSON report generation by workspace
-
-## API Overview
-
-### Auth
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/verify/:token`
-
-### Workspaces
-
-- `GET /api/workspaces`
-- `POST /api/workspaces`
-- `GET /api/workspaces/:workspaceId/members`
-
-### Projects
-
-- `POST /api/projects`
-- `GET /api/projects/:workspaceId`
-- `PUT /api/projects/:id`
-- `DELETE /api/projects/:id`
-
-### Tasks
-
-- `POST /api/tasks`
-- `GET /api/tasks/:workspaceId?projectId=<projectId>`
-- `PUT /api/tasks/:id`
-
-### Analytics & Reports
-
-- `GET /api/analytics/:workspaceId`
-- `GET /api/reports/:workspaceId`
-
-## Authentication Flow
-
-- Login returns a JWT token.
-- Frontend stores the authenticated user in `localStorage`.
-- Axios default `Authorization: Bearer <token>` header is set via `AuthContext`.
-- Backend validates token in `protect` middleware and attaches `req.user`.
-
-## Notes
-
-- Frontend and backend ports must match proxy expectations (`frontend/vite.config.ts` points to port `4000`).
-- Project currently has no formal test suite configured.
-- For production, ensure secrets are not committed and are managed via secure environment configuration.
-
-## Future Improvements
-
-- Add unit/integration tests for controllers and key frontend pages
-- Add CI pipeline (lint, type-check, tests)
-- Improve authorization checks around workspace membership boundaries
-- Add Docker setup for consistent local development
+---
+*Built for professional teams.*
