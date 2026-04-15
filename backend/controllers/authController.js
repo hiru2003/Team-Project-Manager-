@@ -19,9 +19,28 @@ exports.register = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'Member',
+      role: 'Member', // Restricted: Only Admin can be pre-seeded
       verificationToken
     });
+
+    const Workspace = require('../models/Workspace');
+    
+    // Plan: Shared Onboarding
+    let workspace = await Workspace.findOne({ name: 'Nexus-Flow Team Workspace' });
+    
+    if (workspace) {
+      // Add user to existing shared workspace
+      workspace.members.push({ user: user._id, role: user.role });
+      await workspace.save();
+    } else {
+      // First user creates the Nexus-Flow Team Workspace
+      workspace = await Workspace.create({
+        name: 'Nexus-Flow Team Workspace',
+        description: 'The main shared workspace for all team projects and tasks.',
+        owner: user._id,
+        members: [{ user: user._id, role: 'Admin' }]
+      });
+    }
 
     const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
     const message = `Please verify your email by clicking: \n\n ${verifyUrl}`;

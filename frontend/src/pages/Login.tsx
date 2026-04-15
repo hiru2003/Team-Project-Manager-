@@ -9,6 +9,7 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('Member');
   const [isLoading, setIsLoading] = useState(false);
   const [serverMessage, setServerMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
   
@@ -28,7 +29,7 @@ export default function Login() {
         navigate('/dashboard');
       } else {
         // Handle Registration
-        await axios.post('/api/auth/register', { name, email, password });
+        await axios.post('/api/auth/register', { name, email, password, role });
         setServerMessage({ type: 'success', text: 'Account created successfully! Please sign in.' });
         setIsLogin(true);
         setPassword(''); // Clear password for security
@@ -83,20 +84,22 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Registration specific fields */}
             {!isLogin && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700 ml-1">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="John Doe"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400" 
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                  />
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 ml-1">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="John Doe"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400" 
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="space-y-1.5">

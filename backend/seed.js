@@ -29,10 +29,10 @@ const seedDB = async () => {
       isVerified: true
     });
 
-    console.log('Creating Nexus Workspace...');
+    console.log('Deploying Workspace...');
     // Create Workspace
     const workspace = await Workspace.create({
-      name: 'Nexus Primary Workspace',
+      name: 'Nexus-Flow Team Workspace',
       description: 'The core operational database workspace.',
       owner: adminUser._id,
       members: [
@@ -43,20 +43,10 @@ const seedDB = async () => {
       ]
     });
 
-    console.log('Deploying Mock Tasks...');
-    // Create Tasks
-    await Task.create([
-      { title: 'Finish MongoDB Integration', description: 'Fully link the frontend application to the new MongoDB Atlas cluster setup.', status: 'In Progress', workspaceId: workspace._id, assignedTo: adminUser._id },
-      { title: 'Design Component Library', description: 'Create beautiful glassmorphism assets in Tailwind v4.', status: 'Done', workspaceId: workspace._id, assignedTo: adminUser._id },
-      { title: 'Write Auth Middleware tests', description: 'Ensure the auth fallback correctly prevents 401 unhandled exceptions via Next.', status: 'Done', workspaceId: workspace._id, assignedTo: adminUser._id },
-      { title: 'Add real Avatar logic', description: 'Replace the hardcoded avatars with randomized initials from user profiles.', status: 'To Do', workspaceId: workspace._id, assignedTo: adminUser._id },
-      { title: 'Deploy to Vercel/Render', description: 'Host the finalized application so the public can access it.', status: 'To Do', workspaceId: workspace._id, assignedTo: adminUser._id },
-    ]);
-
     console.log('================================================');
-    console.log('SUCCESS! MongoDB Atlas Pipeline configured and seeded.');
-    console.log('Login Email: admin@nexus.com');
-    console.log('Login Password: password123');
+    console.log('SUCCESS! MongoDB Atlas Environment Cleaned.');
+    console.log('Admin Account: admin@nexus.com / password123');
+    console.log('Next: Log in and create your first real project!');
     console.log('================================================');
     process.exit(0);
   } catch (error) {

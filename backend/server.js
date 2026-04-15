@@ -33,8 +33,10 @@ connectDB();
 // Route files
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/workspaces', require('./routes/workspaceRoutes'));
+app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

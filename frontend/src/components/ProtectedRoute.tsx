@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, KanbanSquare, LogOut, Hexagon } from 'lucide-react';
+import { LayoutDashboard, KanbanSquare, LogOut, Hexagon, FolderClosed } from 'lucide-react';
 
 export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
   const { user, loading, logout } = useAuth();
@@ -31,9 +31,9 @@ export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) =>
             <LayoutDashboard className={`w-5 h-5 ${location.pathname === '/dashboard' ? 'text-indigo-600' : 'text-slate-400'}`} />
             Dashboard Overview
           </Link>
-          <Link to="/project" className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all ${location.pathname === '/project' ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm border border-indigo-100/50' : 'text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900'}`}>
-            <KanbanSquare className={`w-5 h-5 ${location.pathname === '/project' ? 'text-indigo-600' : 'text-slate-400'}`} />
-            Project Board
+          <Link to="/projects" className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all ${location.pathname.startsWith('/projects') || location.pathname.startsWith('/project') ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm border border-indigo-100/50' : 'text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900'}`}>
+            <FolderClosed className={`w-5 h-5 ${location.pathname.startsWith('/projects') || location.pathname.startsWith('/project') ? 'text-indigo-600' : 'text-slate-400'}`} />
+            Projects Explorer
           </Link>
         </nav>
         

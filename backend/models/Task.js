@@ -22,8 +22,17 @@ const taskSchema = new mongoose.Schema({
     ref: 'Workspace',
     required: true
   },
-  milestone: {
-    type: String
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project'
+  },
+  priority: {
+    type: String,
+    enum: ['Low', 'Medium', 'High'],
+    default: 'Medium'
+  },
+  dueDate: {
+    type: Date
   }
 }, { timestamps: true });
 
