@@ -21,6 +21,7 @@ export default function ProjectView() {
   });
   
   const { user } = useAuth();
+  const canCreateTask = user?.role === 'Admin' || user?.role === 'Manager';
   
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -48,6 +49,7 @@ export default function ProjectView() {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title.trim() || !workspaceId || !projectId) return;
+    if (!canCreateTask) return;
 
     setIsSubmitting(true);
     try {
@@ -109,13 +111,15 @@ export default function ProjectView() {
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
             />
           </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Task</span>
-          </button>
+          {canCreateTask && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Task</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -201,15 +205,17 @@ export default function ProjectView() {
                   ))}
                   
                   {/* Quick Add Button */}
-                  <button 
-                    onClick={() => {
-                      setNewTask({ ...newTask, status: col.id });
-                      setIsModalOpen(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-slate-200 rounded-2xl text-sm font-medium text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all active:scale-[0.98]"
-                  >
-                    <Plus className="w-4 h-4" /> Add Task
-                  </button>
+                  {canCreateTask && (
+                    <button 
+                      onClick={() => {
+                        setNewTask({ ...newTask, status: col.id });
+                        setIsModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-slate-200 rounded-2xl text-sm font-medium text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all active:scale-[0.98]"
+                    >
+                      <Plus className="w-4 h-4" /> Add Task
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -218,7 +224,7 @@ export default function ProjectView() {
       </main>
 
       {/* New Task Modal Overlay */}
-      {isModalOpen && (
+      {isModalOpen && canCreateTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 

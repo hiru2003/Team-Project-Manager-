@@ -1,21 +1,81 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, CheckCircle2, Clock, AlertCircle, TrendingUp, LogOut } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [analytics, setAnalytics] = useState<any>(null);
+  const visibleTasks = useMemo(() => {
+    const recentTasks = analytics?.recentTasks || [];
+    if (user?.role !== 'Member') return recentTasks;
+
+    return recentTasks.filter((task: any) => {
+      const assigneeId =
+        typeof task.assignedTo === 'string'
+          ? task.assignedTo
+          : task.assignedTo?._id;
+      return assigneeId === user?._id;
+    });
+  }, [analytics, user]);
 
   useEffect(() => {
     const fetchWorkspacesAndAnalytics = async () => {
       try {
         const { data: workspaces } = await axios.get('/api/workspaces');
         if (workspaces.length > 0) {
-          const workspaceId = workspaces[0]._id;
-          const { data } = await axios.get(`/api/analytics/${workspaceId}`);
-          setAnalytics(data);
+          const analyticsResponses = await Promise.all(
+            workspaces.map((workspace: { _id: string }) => axios.get(`/api/analytics/${workspace._id}`))
+          );
+
+          const combined = analyticsResponses.reduce(
+            (acc: any, response: any) => {
+              const data = response.data;
+              acc.totalTasks += data.totalTasks || 0;
+              acc.completedTasks += data.completedTasks || 0;
+              acc.projectCount += data.projectCount || 0;
+
+              (data.distribution || []).forEach((item: any) => {
+                acc.distributionMap[item._id] = (acc.distributionMap[item._id] || 0) + item.count;
+              });
+
+              (data.recentTasks || []).forEach((task: any) => acc.recentTasks.push(task));
+              return acc;
+            },
+            {
+              totalTasks: 0,
+              completedTasks: 0,
+              projectCount: 0,
+              distributionMap: {},
+              recentTasks: []
+            }
+          );
+
+          const distribution = Object.entries(combined.distributionMap).map(([key, value]) => ({
+            _id: key,
+            count: value
+          }));
+
+          const completionRate =
+            combined.totalTasks > 0
+              ? Math.round((combined.completedTasks / combined.totalTasks) * 100)
+              : 0;
+
+          const recentTasks = combined.recentTasks
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 10);
+
+          setAnalytics({
+            totalTasks: combined.totalTasks,
+            completedTasks: combined.completedTasks,
+            projectCount: combined.projectCount,
+            completionRate,
+            distribution,
+            recentTasks
+          });
         }
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
@@ -169,16 +229,26 @@ export default function Dashboard() {
                   </h3>
                   <p className="text-sm text-slate-500">Track and manage your {user?.role === 'Admin' ? 'team\'s' : 'active'} assignments.</p>
                 </div>
-                <button 
-                  onClick={() => window.location.href = '/projects'} 
-                  className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
-                >
-                  Go to Project Board <CheckCircle2 className="w-4 h-4 ml-1" />
-                </button>
+                <div className="flex items-center gap-4">
+                  {user?.role === 'Member' && (
+                    <button
+                      onClick={() => navigate('/my-tasks')}
+                      className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
+                    >
+                      My Task List <CheckCircle2 className="w-4 h-4 ml-1" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate('/projects')}
+                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
+                  >
+                    Go to Project Board <CheckCircle2 className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
               </div>
               
               <div className="overflow-x-auto">
-                {analytics.recentTasks && analytics.recentTasks.length > 0 ? (
+                {visibleTasks.length > 0 ? (
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/50">
@@ -189,7 +259,7 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {analytics.recentTasks.map((task: any) => (
+                      {visibleTasks.map((task: any) => (
                         <tr key={task._id} className="hover:bg-slate-50/30 transition-colors group">
                           <td className="px-8 py-4">
                             <div className="flex flex-col">

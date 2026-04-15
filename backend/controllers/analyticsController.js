@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
+const Workspace = require('../models/Workspace');
 const mongoose = require('mongoose');
 
 exports.getDashboardAnalytics = async (req, res) => {
@@ -9,6 +10,17 @@ exports.getDashboardAnalytics = async (req, res) => {
       workspaceId = mongoose.Types.ObjectId.createFromHexString(req.params.workspaceId);
     } catch (e) {
       return res.status(400).json({ message: 'Invalid Workspace ID' });
+    }
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: 'Workspace not found' });
+    }
+    const isMember = workspace.members.some(
+      (member) => member.user.toString() === req.user._id.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({ message: 'Not authorized for this workspace' });
     }
     
     // Define match criteria based on role

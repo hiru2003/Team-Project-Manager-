@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import { Plus, Folder, Calendar, Users, ChevronRight, LayoutGrid, List, X } from 'lucide-react';
+import { Plus, Folder, Calendar, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Projects() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -11,8 +11,8 @@ export default function Projects() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', description: '', status: 'Planning' });
   
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const fetchProjects = async (wId: string) => {
     try {
@@ -67,15 +67,17 @@ export default function Projects() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Active Projects</h1>
           <p className="text-slate-500 font-medium">Manage and track your primary team initiatives.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Project</span>
-          </button>
-        </div>
+        {user?.role !== 'Member' && (
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Project</span>
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -124,12 +126,14 @@ export default function Projects() {
              </div>
              <h3 className="text-lg font-bold text-slate-900">No projects found</h3>
              <p className="text-slate-500 text-sm mb-6">Get started by creating your first team project.</p>
-             <button 
-              onClick={() => setIsModalOpen(true)}
-              className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2"
-             >
-                <Plus className="w-4 h-4" /> Create First Project
-             </button>
+             {user?.role !== 'Member' && (
+               <button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2"
+               >
+                  <Plus className="w-4 h-4" /> Create First Project
+               </button>
+             )}
           </div>
         )}
       </div>

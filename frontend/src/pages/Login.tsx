@@ -9,9 +9,9 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Member');
   const [isLoading, setIsLoading] = useState(false);
   const [serverMessage, setServerMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
+  const role = 'Member';
   
   const { login } = useAuth();
   const navigate = useNavigate();
