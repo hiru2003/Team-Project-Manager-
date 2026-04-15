@@ -2,16 +2,42 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Search, Plus, MoreHorizontal, Calendar, ArrowRight, KanbanSquare, X, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Calendar, ArrowRight, KanbanSquare, X, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+
+type Member = {
+  _id: string;
+  name: string;
+  email: string;
+};
+
+type TaskItem = {
+  _id: string;
+  title: string;
+  description?: string;
+  status: 'To Do' | 'In Progress' | 'Done';
+  priority?: 'Low' | 'Medium' | 'High';
+  dueDate?: string;
+  assignedTo?: { _id: string; name: string } | string;
+};
+
+type TaskForm = {
+  title: string;
+  description: string;
+  status: 'To Do' | 'In Progress' | 'Done';
+  priority: 'Low' | 'Medium' | 'High';
+  dueDate: string;
+  assignedTo: string;
+};
 
 export default function ProjectView() {
   const { id: projectId } = useParams();
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newTask, setNewTask] = useState({ 
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [newTask, setNewTask] = useState<TaskForm>({ 
     title: '', 
     description: '', 
     status: 'To Do', 
@@ -22,31 +48,58 @@ export default function ProjectView() {
   
   const { user } = useAuth();
   const canCreateTask = user?.role === 'Admin' || user?.role === 'Manager';
+  const canManageTask = user?.role === 'Admin' || user?.role === 'Manager';
+
+  const resetTaskForm = () => {
+    setNewTask({ title: '', description: '', status: 'To Do', priority: 'Medium', dueDate: '', assignedTo: '' });
+    setEditingTaskId(null);
+  };
+
+  const fetchProjectData = async () => {
+    try {
+      const { data: workspaces } = await axios.get('/api/workspaces');
+      if (workspaces.length > 0) {
+        const currentWorkspaceId = workspaces[0]._id;
+        setWorkspaceId(currentWorkspaceId);
+        
+        const { data: taskData } = await axios.get(`/api/tasks/${currentWorkspaceId}?projectId=${projectId}`);
+        setTasks(Array.isArray(taskData) ? taskData : []);
+
+        const { data: memberData } = await axios.get(`/api/workspaces/${currentWorkspaceId}/members`);
+        setMembers(Array.isArray(memberData) ? memberData : []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch project data:', error);
+    }
+  };
   
   useEffect(() => {
-    const fetchProjectData = async () => {
-      try {
-        const { data: workspaces } = await axios.get('/api/workspaces');
-        if (workspaces.length > 0) {
-          const currentWorkspaceId = workspaces[0]._id;
-          setWorkspaceId(currentWorkspaceId);
-          
-          // Fetch Tasks
-          const { data: taskData } = await axios.get(`/api/tasks/${currentWorkspaceId}?projectId=${projectId}`);
-          setTasks(taskData);
-
-          // Fetch Members
-          const { data: memberData } = await axios.get(`/api/workspaces/${currentWorkspaceId}/members`);
-          setMembers(memberData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch project data:', error);
-      }
-    };
     fetchProjectData();
   }, [projectId]);
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const openCreateTaskModal = (status?: TaskForm['status']) => {
+    resetTaskForm();
+    if (status) {
+      setNewTask((prev) => ({ ...prev, status }));
+    }
+    setIsModalOpen(true);
+  };
+
+  const openEditTaskModal = (task: TaskItem) => {
+    const assignedTo = typeof task.assignedTo === 'string' ? task.assignedTo : task.assignedTo?._id || '';
+    setEditingTaskId(task._id);
+    setNewTask({
+      title: task.title || '',
+      description: task.description || '',
+      status: task.status || 'To Do',
+      priority: task.priority || 'Medium',
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+      assignedTo
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title.trim() || !workspaceId || !projectId) return;
     if (!canCreateTask) return;
@@ -58,25 +111,42 @@ export default function ProjectView() {
         ? newTask.assignedTo 
         : user?._id;
 
-      const { data } = await axios.post('/api/tasks', {
-        ...newTask,
-        workspaceId,
-        projectId,
-        assignedTo: targetAssignee
-      });
-      
-      // Update UI immediately
-      const activeTasks = Array.isArray(tasks) ? tasks : [];
-      setTasks([...activeTasks, data]);
-      
-      // Reset & Close
-      setNewTask({ title: '', description: '', status: 'To Do', priority: 'Medium', dueDate: '', assignedTo: '' });
+      if (editingTaskId) {
+        await axios.put(`/api/tasks/${editingTaskId}`, {
+          ...newTask,
+          assignedTo: targetAssignee
+        });
+      } else {
+        await axios.post('/api/tasks', {
+          ...newTask,
+          workspaceId,
+          projectId,
+          assignedTo: targetAssignee
+        });
+      }
+
+      await fetchProjectData();
+      resetTaskForm();
       setIsModalOpen(false);
     } catch (error) {
-      console.error('Failed to create task:', error);
-      alert('Failed to create task. Please try again.');
+      console.error('Failed to save task:', error);
+      alert('Failed to save task. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!canManageTask) return;
+    const confirmed = window.confirm('Delete this task? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await axios.delete(`/api/tasks/${taskId}`);
+      setTasks((prev) => prev.filter((task) => task._id !== taskId));
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('Failed to delete task. Please try again.');
     }
   };
 
@@ -113,7 +183,7 @@ export default function ProjectView() {
           </div>
           {canCreateTask && (
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => openCreateTaskModal()}
               className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
@@ -171,8 +241,8 @@ export default function ProjectView() {
                         </div>
                         {/* Fake avatar mapping or initials */}
                         {task?.assignedTo && (
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-white shrink-0" title={task.assignedTo.name || 'User'}>
-                            {task.assignedTo.name ? task.assignedTo.name.charAt(0) : 'U'}
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-white shrink-0" title={typeof task.assignedTo === 'string' ? 'User' : task.assignedTo.name || 'User'}>
+                            {typeof task.assignedTo === 'string' ? 'U' : task.assignedTo.name ? task.assignedTo.name.charAt(0) : 'U'}
                           </div>
                         )}
                       </div>
@@ -195,11 +265,29 @@ export default function ProjectView() {
                           <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Date'}</span>
                         </div>
                         
-                        {(user?.role === 'Admin' || true) && (
-                          <button className="text-indigo-500 hover:text-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold">
-                            Details <ArrowRight className="w-3 h-3" />
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {canManageTask && (
+                            <>
+                              <button
+                                onClick={() => openEditTaskModal(task)}
+                                className="text-indigo-500 hover:text-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTask(task._id)}
+                                className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </button>
+                            </>
+                          )}
+                          {!canManageTask && (
+                            <button className="text-indigo-500 hover:text-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold">
+                              Details <ArrowRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -208,8 +296,7 @@ export default function ProjectView() {
                   {canCreateTask && (
                     <button 
                       onClick={() => {
-                        setNewTask({ ...newTask, status: col.id });
-                        setIsModalOpen(true);
+                        openCreateTaskModal(col.id);
                       }}
                       className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-slate-200 rounded-2xl text-sm font-medium text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all active:scale-[0.98]"
                     >
@@ -228,7 +315,12 @@ export default function ProjectView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
-            onClick={() => !isSubmitting && setIsModalOpen(false)}
+            onClick={() => {
+              if (!isSubmitting) {
+                setIsModalOpen(false);
+                resetTaskForm();
+              }
+            }}
           ></div>
           
           <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -238,10 +330,15 @@ export default function ProjectView() {
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Create New Task</h3>
+                <h3 className="text-lg font-bold text-slate-900">{editingTaskId ? 'Edit Task' : 'Create New Task'}</h3>
               </div>
               <button 
-                onClick={() => !isSubmitting && setIsModalOpen(false)}
+                onClick={() => {
+                  if (!isSubmitting) {
+                    setIsModalOpen(false);
+                    resetTaskForm();
+                  }
+                }}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -249,7 +346,7 @@ export default function ProjectView() {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleCreateTask} className="p-6 space-y-5">
+            <form onSubmit={handleSubmitTask} className="p-6 space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700 ml-1">Task Title <span className="text-red-500">*</span></label>
                 <input 
@@ -307,7 +404,7 @@ export default function ProjectView() {
                     onChange={e => setNewTask({...newTask, assignedTo: e.target.value})}
                   >
                     <option value="">Select a member...</option>
-                    {members.map((member: any) => (
+                    {members.map((member) => (
                       <option key={member._id} value={member._id}>
                         {member.name} ({member.email})
                       </option>
@@ -323,7 +420,10 @@ export default function ProjectView() {
               <div className="pt-4 flex items-center justify-end gap-3 flex-col-reverse sm:flex-row">
                 <button 
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    resetTaskForm();
+                  }}
                   disabled={isSubmitting}
                   className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors"
                 >
@@ -334,7 +434,7 @@ export default function ProjectView() {
                   disabled={isSubmitting || !newTask.title.trim()}
                   className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-medium text-white bg-slate-900 hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Task'}
+                  {isSubmitting ? 'Saving...' : editingTaskId ? 'Update Task' : 'Create Task'}
                 </button>
               </div>
             </form>

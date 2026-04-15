@@ -117,3 +117,26 @@ exports.updateTask = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.deleteTask = async (req, res) => {
+  try {
+    const existingTask = await Task.findById(req.params.id);
+    if (!existingTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const workspace = await Workspace.findById(existingTask.workspaceId);
+    if (!workspace || !isWorkspaceMember(workspace, req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized for this workspace' });
+    }
+
+    if (req.user.role === 'Member') {
+      return res.status(403).json({ message: 'Members are not allowed to delete tasks' });
+    }
+
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Task deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
